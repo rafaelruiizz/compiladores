@@ -4,7 +4,6 @@ import java.io.InputStreamReader;
 import java.util.List;
 
 public class Principal {
-
     static boolean existenErrores = false;
 
     public static void main(String[] args) throws IOException {
@@ -15,7 +14,7 @@ public class Principal {
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
 
-        for (;;) {
+        while (true) {
             System.out.print(">>> ");
             String linea = reader.readLine();
             if (linea == null) break;
@@ -25,15 +24,12 @@ public class Principal {
     }
 
     private static void ejecutar(String source) {
-        // Paso 1: Escaneo léxico
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
 
-        // Paso 2: Análisis sintáctico
         Parser parser = new Parser(tokens);
-        parser.parse(); // Llama al análisis sintáctico
+        parser.parse();
 
-        // Mostrar tokens (opcional para depuración)
         for (Token token : tokens) {
             System.out.println(token);
         }

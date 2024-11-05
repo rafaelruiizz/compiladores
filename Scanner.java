@@ -16,7 +16,14 @@ public class Scanner {
         palabrasReservadas.put("and", TipoToken.AND);
         palabrasReservadas.put("or", TipoToken.OR);
         palabrasReservadas.put("select", TipoToken.SELECT);
-        // Añade todas las palabras reservadas necesarias
+        palabrasReservadas.put("from", TipoToken.FROM);
+        palabrasReservadas.put("where", TipoToken.WHERE);
+        palabrasReservadas.put("distinct", TipoToken.DISTINCT);
+        palabrasReservadas.put("false", TipoToken.FALSE);
+        palabrasReservadas.put("is", TipoToken.IS);
+        palabrasReservadas.put("not", TipoToken.NOT);
+        palabrasReservadas.put("null", TipoToken.NULL);
+        palabrasReservadas.put("true", TipoToken.TRUE);
     }
 
     public Scanner(String source) {
@@ -28,7 +35,7 @@ public class Scanner {
             start = current;
             scanToken();
         }
-        tokens.add(new Token(TipoToken.EOF, "", line));
+        tokens.add(new Token(TipoToken.EOF, "", null, line));
         return tokens;
     }
 
@@ -39,26 +46,27 @@ public class Scanner {
             case ')': addToken(TipoToken.RIGHT_PAREN); break;
             case '+': addToken(TipoToken.PLUS); break;
             case '-': addToken(TipoToken.MINUS); break;
+            case '*': addToken(TipoToken.STAR); break;
             case '/': 
                 if (match('/')) {
-                    // Comentario de una línea
                     while (peek() != '\n' && !isAtEnd()) advance();
                 } else if (match('*')) {
-                    // Comentario de bloque
                     while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
                         if (peek() == '\n') line++;
                         advance();
                     }
-                    if (!isAtEnd()) { advance(); advance(); } // Cierra */
+                    if (!isAtEnd()) { advance(); advance(); }
                 } else {
                     addToken(TipoToken.SLASH);
                 }
                 break;
-            case '*': addToken(TipoToken.STAR); break;
+            case ',': addToken(TipoToken.COMA); break;
+            case ';': addToken(TipoToken.SEMICOLON); break;
+            case '.': addToken(TipoToken.DOT); break;
             case ' ':
             case '\r':
             case '\t':
-                break; // Ignora espacios
+                break;
             case '\n':
                 line++;
                 break;
@@ -78,16 +86,14 @@ public class Scanner {
     private void number() {
         while (isDigit(peek())) advance();
 
-        // Detección de números flotantes
         if (peek() == '.' && isDigit(peekNext())) {
             advance();
             while (isDigit(peek())) advance();
         }
 
-        // Detección de notación exponencial (e.g., 1.23E-5)
         if (peek() == 'E' || peek() == 'e') {
-            advance(); // consume E
-            if (peek() == '+' || peek() == '-') advance(); // permite E+ o E-
+            advance();
+            if (peek() == '+' || peek() == '-') advance();
             while (isDigit(peek())) advance();
         }
 

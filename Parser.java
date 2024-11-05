@@ -17,11 +17,11 @@ public class Parser {
         this.state = ParserState.BEGIN;
     }
 
-    // Método de inicio
     public void parse() {
-        consulta();
-        if (state == ParserState.FINISH && lookahead.tipo == TipoToken.EOF) {
-            System.out.println("== PARSED SUCCESSFULLY");
+        consulta();  // Inicia el análisis de una consulta SQL
+        
+        if (state != ParserState.ERROR && lookahead.tipo == TipoToken.EOF) {
+            System.out.println("== PARSED SUCCESSFULLY ==");
         } else {
             error("Error de sintaxis al final de la consulta.");
         }
@@ -41,19 +41,20 @@ public class Parser {
         }
     }
 
-    // Implementación de reglas según la gramática SQL
+    // Implementación de las reglas gramaticales para SQL
 
-    // Consulta principal Q → select D from T W
+    // Regla principal: consulta SQL
+    // Q → SELECT D FROM T W
     private void consulta() {
         if (state == ParserState.ERROR) return;
 
         if (lookahead.tipo == TipoToken.SELECT) {
             match(TipoToken.SELECT);
-            d(); // Procesa la regla D
+            d();  // Maneja la cláusula SELECT
             if (lookahead.tipo == TipoToken.FROM) {
                 match(TipoToken.FROM);
-                t(); // Procesa la regla T
-                w(); // Procesa la regla W
+                t();  // Maneja la cláusula FROM
+                w();  // Maneja la cláusula WHERE (opcional)
             } else {
                 error("Se esperaba 'FROM' después de 'SELECT'");
             }
@@ -62,13 +63,13 @@ public class Parser {
         }
     }
 
-    // D → distinct P | P
+    // D → DISTINCT P | P
     private void d() {
         if (state == ParserState.ERROR) return;
 
         if (lookahead.tipo == TipoToken.DISTINCT) {
             match(TipoToken.DISTINCT);
-            p();
+            p();  // Procesa los campos a seleccionar
         } else {
             p();
         }
@@ -104,32 +105,15 @@ public class Parser {
         }
     }
 
-    // T → T1 T3
+    // T → IDENTIFICADOR T3
     private void t() {
         if (state == ParserState.ERROR) return;
 
-        t1();
-        t3();
-    }
-
-    // T1 → id T2
-    private void t1() {
-        if (state == ParserState.ERROR) return;
-
         if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
             match(TipoToken.IDENTIFICADOR);
-            t2();
+            t3();
         } else {
-            error("Se esperaba un identificador en la tabla");
-        }
-    }
-
-    // T2 → id | ε
-    private void t2() {
-        if (state == ParserState.ERROR) return;
-
-        if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-            match(TipoToken.IDENTIFICADOR);
+            error("Se esperaba un nombre de tabla después de 'FROM'");
         }
     }
 
@@ -143,7 +127,7 @@ public class Parser {
         }
     }
 
-    // W → where Expr | ε
+    // W → WHERE Expr | ε
     private void w() {
         if (state == ParserState.ERROR) return;
 
@@ -153,7 +137,7 @@ public class Parser {
         }
     }
 
-    // Implementación de la regla de expresión (Expr)
+    // Expr → LogicOr
     private void expr() {
         logicOr();
     }
@@ -226,7 +210,7 @@ public class Parser {
             expr();
             match(TipoToken.RIGHT_PAREN);
         } else {
-            error("Expresión no válida");
+            error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
         }
     }
 
