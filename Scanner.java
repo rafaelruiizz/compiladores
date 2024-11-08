@@ -47,7 +47,7 @@ public class Scanner {
             case '+': addToken(TipoToken.PLUS); break;
             case '-': addToken(TipoToken.MINUS); break;
             case '*': addToken(TipoToken.STAR); break;
-            case '/': 
+            case '/':
                 if (match('/')) {
                     while (peek() != '\n' && !isAtEnd()) advance();
                 } else if (match('*')) {
@@ -63,6 +63,7 @@ public class Scanner {
             case ',': addToken(TipoToken.COMA); break;
             case ';': addToken(TipoToken.SEMICOLON); break;
             case '.': addToken(TipoToken.DOT); break;
+            case '=': addToken(TipoToken.EQUAL); break;  // Agregado para el token '='
             case ' ':
             case '\r':
             case '\t':

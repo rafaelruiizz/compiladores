@@ -18,11 +18,11 @@ public class Parser {
     }
 
     public void parse() {
-        consulta();  // Inicia el análisis de una consulta SQL
+        consulta();
         
         if (state != ParserState.ERROR && lookahead.tipo == TipoToken.EOF) {
             System.out.println("== PARSED SUCCESSFULLY ==");
-        } else {
+        } else if (state != ParserState.ERROR) {
             error("Error de sintaxis al final de la consulta.");
         }
     }
@@ -44,17 +44,21 @@ public class Parser {
     // Implementación de las reglas gramaticales para SQL
 
     // Regla principal: consulta SQL
-    // Q → SELECT D FROM T W
     private void consulta() {
         if (state == ParserState.ERROR) return;
 
         if (lookahead.tipo == TipoToken.SELECT) {
             match(TipoToken.SELECT);
-            d();  // Maneja la cláusula SELECT
+            d();
             if (lookahead.tipo == TipoToken.FROM) {
                 match(TipoToken.FROM);
-                t();  // Maneja la cláusula FROM
-                w();  // Maneja la cláusula WHERE (opcional)
+                t();
+                w(); // Maneja la cláusula WHERE opcional
+                if (lookahead.tipo == TipoToken.SEMICOLON) {
+                    match(TipoToken.SEMICOLON);
+                } else {
+                    error("Se esperaba ';' al final de la consulta.");
+                }
             } else {
                 error("Se esperaba 'FROM' después de 'SELECT'");
             }
@@ -63,19 +67,17 @@ public class Parser {
         }
     }
 
-    // D → DISTINCT P | P
     private void d() {
         if (state == ParserState.ERROR) return;
 
         if (lookahead.tipo == TipoToken.DISTINCT) {
             match(TipoToken.DISTINCT);
-            p();  // Procesa los campos a seleccionar
+            p();
         } else {
             p();
         }
     }
 
-    // P → * | F
     private void p() {
         if (state == ParserState.ERROR) return;
 
@@ -86,7 +88,6 @@ public class Parser {
         }
     }
 
-    // F → Expr F1
     private void f() {
         if (state == ParserState.ERROR) return;
 
@@ -94,7 +95,6 @@ public class Parser {
         f1();
     }
 
-    // F1 → , Expr F1 | ε
     private void f1() {
         if (state == ParserState.ERROR) return;
 
@@ -105,7 +105,6 @@ public class Parser {
         }
     }
 
-    // T → IDENTIFICADOR T3
     private void t() {
         if (state == ParserState.ERROR) return;
 
@@ -117,7 +116,6 @@ public class Parser {
         }
     }
 
-    // T3 → , T | ε
     private void t3() {
         if (state == ParserState.ERROR) return;
 
@@ -127,7 +125,6 @@ public class Parser {
         }
     }
 
-    // W → WHERE Expr | ε
     private void w() {
         if (state == ParserState.ERROR) return;
 
@@ -137,7 +134,6 @@ public class Parser {
         }
     }
 
-    // Expr → LogicOr
     private void expr() {
         logicOr();
     }
@@ -169,7 +165,8 @@ public class Parser {
     private void comparison() {
         term();
         while (lookahead.tipo == TipoToken.LT || lookahead.tipo == TipoToken.LE
-                || lookahead.tipo == TipoToken.GT || lookahead.tipo == TipoToken.GE) {
+                || lookahead.tipo == TipoToken.GT || lookahead.tipo == TipoToken.GE
+                || lookahead.tipo == TipoToken.EQUAL) {
             match(lookahead.tipo);
             term();
         }
@@ -217,5 +214,18 @@ public class Parser {
     private void error(String mensaje) {
         System.err.println("[Línea " + lookahead.linea + "] Error: " + mensaje);
         state = ParserState.ERROR;
+        synchronize();
+    }
+
+    private void synchronize() {
+        tokensIndex++;
+        while (tokensIndex < tokens.size()) {
+            lookahead = tokens.get(tokensIndex);
+            if (lookahead.tipo == TipoToken.FROM || lookahead.tipo == TipoToken.WHERE || lookahead.tipo == TipoToken.SEMICOLON) {
+                state = ParserState.BEGIN;
+                return;
+            }
+            tokensIndex++;
+        }
     }
 }
