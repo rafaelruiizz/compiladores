@@ -16,7 +16,7 @@ public class Token {
     }
 
     @Override
-    public String toString() {
+    public String toString() {//Hola Rafa :)
         return tipo + " " + lexema + " " + (literal != null ? literal.toString() : "");
     }
 }
