@@ -1,61 +1,70 @@
 import java.util.List;
 
+// Enumeración para representar los posibles estados del analizador sintáctico
 enum ParserState {
-    BEGIN, FINISH, ERROR
+    BEGIN,    // Estado inicial del análisis
+    FINISH,   // Estado de finalización exitosa
+    ERROR     // Estado de error en caso de encontrar un problema de sintaxis
 }
 
+// Clase Parser para analizar la secuencia de tokens y verificar la sintaxis de una consulta
 public class Parser {
-    private final List<Token> tokens;
-    private int tokensIndex = 0;
-    private Token lookahead;
-    private ParserState state;
+    private final List<Token> tokens; // Lista de tokens generada por el analizador léxico
+    private int tokensIndex = 0;      // Índice actual en la lista de tokens
+    private Token lookahead;          // Token que se está analizando actualmente
+    private ParserState state;        // Estado actual del analizador
 
+    // Constructor que inicializa la lista de tokens y el primer token a analizar
     public Parser(List<Token> tokens) {
         this.tokens = tokens;
         this.tokensIndex = 0;
-        this.lookahead = tokens.get(tokensIndex);
-        this.state = ParserState.BEGIN;
+        this.lookahead = tokens.get(tokensIndex);  // Establece el primer token como lookahead
+        this.state = ParserState.BEGIN;            // Inicia en el estado BEGIN
     }
 
+    // Método principal de análisis
     public void parse() {
-        consulta();
-        
+        consulta();  // Llama a la regla principal para analizar la consulta
+
+        // Verifica si el análisis terminó correctamente o si hubo un error
         if (state != ParserState.ERROR && lookahead.tipo == TipoToken.EOF) {
-            System.out.println("== PARSED SUCCESSFULLY ==");
+            System.out.println("== PARSED SUCCESSFULLY ==");  // Mensaje de éxito
         } else if (state != ParserState.ERROR) {
             error("Error de sintaxis al final de la consulta.");
         }
     }
 
+    // Método para comparar el token actual con el tipo esperado
     private void match(TipoToken type) {
         if (lookahead.tipo == type) {
-            tokensIndex++;
+            tokensIndex++;  // Avanza al siguiente token si coincide el tipo
             if (tokensIndex < tokens.size()) {
-                lookahead = tokens.get(tokensIndex);
+                lookahead = tokens.get(tokensIndex);  // Actualiza lookahead al siguiente token
             } else {
-                state = ParserState.FINISH;
+                state = ParserState.FINISH;  // Marca el estado como FINISH si ya no hay más tokens
             }
         } else {
-            state = ParserState.ERROR;
+            state = ParserState.ERROR;  // Cambia el estado a ERROR si no coincide el tipo esperado
             error("Se esperaba: " + type + " pero se encontró: " + lookahead.tipo);
         }
     }
 
-    // Implementación de las reglas gramaticales para SQL
+    // Reglas gramaticales de análisis para una consulta SQL
+    // Cada método representa una regla en la gramática
 
-    // Regla principal: consulta SQL
+    // Regla principal: una consulta SQL
     private void consulta() {
         if (state == ParserState.ERROR) return;
 
-        if (lookahead.tipo == TipoToken.SELECT) {
+        if (lookahead.tipo == TipoToken.SELECT) {  // La consulta debe comenzar con SELECT
             match(TipoToken.SELECT);
             d();
             if (lookahead.tipo == TipoToken.FROM) {
                 match(TipoToken.FROM);
                 t();
-                w(); // Maneja la cláusula WHERE opcional
+                w();  // Cláusula opcional WHERE
                 if (lookahead.tipo == TipoToken.SEMICOLON) {
-                    match(TipoToken.SEMICOLON);
+                    match(TipoToken.SEMICOLON);  // Fin de la consulta con ';'
                 } else {
                     error("Se esperaba ';' al final de la consulta.");
                 }
@@ -67,6 +76,7 @@ public class Parser {
         }
     }
 
+    // Regla opcional para manejar DISTINCT después de SELECT
     private void d() {
         if (state == ParserState.ERROR) return;
 
@@ -78,6 +88,7 @@ public class Parser {
         }
     }
 
+    // Regla para manejar '*' o una lista de columnas
     private void p() {
         if (state == ParserState.ERROR) return;
 
@@ -88,11 +99,12 @@ public class Parser {
         }
     }
 
+    // Reglas para listas de expresiones de columnas
     private void f() {
         if (state == ParserState.ERROR) return;
 
-        expr();
-        f1();
+        expr();  // Llama a la regla para una expresión general
+        f1();    // Llama a la regla para una lista de expresiones separadas por comas
     }
 
     private void f1() {
@@ -101,10 +113,11 @@ public class Parser {
         if (lookahead.tipo == TipoToken.COMA) {
             match(TipoToken.COMA);
             expr();
-            f1();
+            f1();  // Recursivo para más columnas separadas por coma
         }
     }
 
+    // Regla para nombres de tablas después de FROM
     private void t() {
         if (state == ParserState.ERROR) return;
 
@@ -121,21 +134,23 @@ public class Parser {
 
         if (lookahead.tipo == TipoToken.COMA) {
             match(TipoToken.COMA);
-            t();
+            t();  // Permite múltiples tablas separadas por coma
         }
     }
 
+    // Regla opcional para la cláusula WHERE
     private void w() {
         if (state == ParserState.ERROR) return;
 
         if (lookahead.tipo == TipoToken.WHERE) {
             match(TipoToken.WHERE);
-            expr();
+            expr();  // Llama a la regla para una expresión lógica
         }
     }
 
+    // Reglas para expresiones lógicas (condiciones)
     private void expr() {
-        logicOr();
+        logicOr();  // Expresión lógica que puede ser una serie de OR
     }
 
     private void logicOr() {
@@ -198,11 +213,12 @@ public class Parser {
     }
 
     private void primary() {
+        // Valores literales o identificadores
         if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
                 || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
                 || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
             match(lookahead.tipo);
-        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {  // Expresión entre paréntesis
             match(TipoToken.LEFT_PAREN);
             expr();
             match(TipoToken.RIGHT_PAREN);
@@ -211,16 +227,19 @@ public class Parser {
         }
     }
 
+    // Método para manejar errores de sintaxis
     private void error(String mensaje) {
         System.err.println("[Línea " + lookahead.linea + "] Error: " + mensaje);
         state = ParserState.ERROR;
-        synchronize();
+        synchronize();  // Llama a sincronización para intentar recuperar el análisis
     }
 
+    // Método para reanudar el análisis después de un error
     private void synchronize() {
         tokensIndex++;
         while (tokensIndex < tokens.size()) {
             lookahead = tokens.get(tokensIndex);
+            // Reanuda el análisis en palabras clave importantes
             if (lookahead.tipo == TipoToken.FROM || lookahead.tipo == TipoToken.WHERE || lookahead.tipo == TipoToken.SEMICOLON) {
                 state = ParserState.BEGIN;
                 return;
@@ -229,3 +248,4 @@ public class Parser {
         }
     }
 }
+
