@@ -222,24 +222,23 @@ public class Parser {
     }
 
     // Primary → true | false | null | number | string | id AliasOpc | ( Expr )
-private void primary() {
-    if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
-            || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
-            || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
-        match(lookahead.tipo);
-    } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
-        match(TipoToken.LEFT_PAREN);
-        expr(); // Procesa la expresión dentro de los paréntesis
-        if (lookahead.tipo == TipoToken.RIGHT_PAREN) {
-            match(TipoToken.RIGHT_PAREN); // Asegura que se cierre el paréntesis
+    private void primary() {
+        if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
+                || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
+                || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
+            match(lookahead.tipo);
+        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+            match(TipoToken.LEFT_PAREN); // Coincide con el paréntesis de apertura
+            expr(); // Evalúa la expresión dentro de los paréntesis
+            if (lookahead.tipo == TipoToken.RIGHT_PAREN) {
+                match(TipoToken.RIGHT_PAREN); // Coincide con el paréntesis de cierre
+            } else {
+                error("Se esperaba ')' para cerrar la expresión entre paréntesis.");
+            }
         } else {
-            error("Se esperaba ')'");
+            error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
         }
-    } else {
-        error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
     }
-}
-
 
     private void error(String mensaje) {
         System.err.println("[Línea " + lookahead.linea + "] Error: " + mensaje);
