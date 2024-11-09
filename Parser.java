@@ -150,7 +150,7 @@ public class Parser {
     }
 
         // Reglas para expresiones lógicas (condiciones)
-        
+
     // Expr → LogicOr
     private void expr() {
         logicOr();
@@ -222,19 +222,24 @@ public class Parser {
     }
 
     // Primary → true | false | null | number | string | id AliasOpc | ( Expr )
-    private void primary() {
-        if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
-                || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
-                || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
-            match(lookahead.tipo);
-        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
-            match(TipoToken.LEFT_PAREN);
-            expr();
-            match(TipoToken.RIGHT_PAREN);
+private void primary() {
+    if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
+            || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
+            || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
+        match(lookahead.tipo);
+    } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+        match(TipoToken.LEFT_PAREN);
+        expr(); // Procesa la expresión dentro de los paréntesis
+        if (lookahead.tipo == TipoToken.RIGHT_PAREN) {
+            match(TipoToken.RIGHT_PAREN); // Asegura que se cierre el paréntesis
         } else {
-            error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
+            error("Se esperaba ')'");
         }
+    } else {
+        error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
     }
+}
+
 
     private void error(String mensaje) {
         System.err.println("[Línea " + lookahead.linea + "] Error: " + mensaje);
