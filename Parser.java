@@ -152,6 +152,8 @@ public class Parser {
 
         // Reglas para expresiones lógicas (condiciones)
 
+        //Modificar a partir de aqui
+
     // Expr → LogicOr
     private void expr() {
         logicOr();
