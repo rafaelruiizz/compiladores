@@ -39,8 +39,13 @@ public class Scanner {
             start = current;  // Marca el inicio de un nuevo lexema
             scanToken();  // Escanea el siguiente token
         }
-        tokens.add(new Token(TipoToken.EOF, "", null, line));  // Añade un token de fin de archivo
+        
+        // Si solo hay comentarios, asegúrate de que solo se agregue EOF.
+        if (tokens.isEmpty() || (tokens.size() == 1 && tokens.get(0).tipo == TipoToken.EOF)) {
+        tokens.clear(); // Limpiar los tokens en caso de que haya solo comentarios
+        }
 
+        tokens.add(new Token(TipoToken.EOF, "", null, line));  // Añade un token de fin de archivo
         return tokens;  // Devuelve la lista de tokens encontrados
     }
 
@@ -51,21 +56,19 @@ public class Scanner {
             case '(': addToken(TipoToken.LEFT_PAREN); break;
             case ')': addToken(TipoToken.RIGHT_PAREN); break;
             case '+': addToken(TipoToken.PLUS); break;
-            case '-': addToken(TipoToken.MINUS); break;
+            case '-': addToken(TipoToken.MINUS); 
+                if (match('-')) { // Comentario de una línea
+                    skipSingleLineComment();
+                } else {
+                    addToken(TipoToken.MINUS);
+                }break;
             case '*': addToken(TipoToken.STAR); break;
             case '/':
-                if (match('/')) {  // Comentario de línea
-                    while (peek() != '\n' && !isAtEnd()) advance();
-                } else if (match('*')) {  // Comentario multilínea
-                    while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
-                        if (peek() == '\n') line++;
-                        advance();
-                    }
-                    if (!isAtEnd()) { advance(); advance(); }
+                if (match('*')) { // Comentario de varias líneas
+                    skipMultiLineComment();
                 } else {
                     addToken(TipoToken.SLASH);
-                }
-                break;
+                }break;
             case ',': addToken(TipoToken.COMA); break;
             case ';': addToken(TipoToken.SEMICOLON); break;
             case '.': addToken(TipoToken.DOT); break;
@@ -95,7 +98,25 @@ public class Scanner {
                 break;
         }
     }
+    private void skipSingleLineComment() {
+        while (peek() != '\n' && !isAtEnd()) advance();
+    }
 
+    private void skipMultiLineComment() {
+        while (!isAtEnd()) {
+            if (peek() == '*' && peekNext() == '/') {
+                advance(); // Avanza el '*'
+                advance(); // Avanza el '/'
+                break;
+            }
+            if (peek() == '\n') line++;
+            advance();
+        }
+        if (isAtEnd()) {
+            System.err.println("Error: Comentario de varias líneas sin cerrar.");
+        }
+    }
+    
     private void number() {
         while (isDigit(peek())) advance();
 
