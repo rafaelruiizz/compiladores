@@ -3,15 +3,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-// Clase Scanner que actúa como analizador léxico para convertir un texto en una lista de tokens
 public class Scanner {
-    private final String source;  // Fuente de entrada (código a analizar)
-    private final List<Token> tokens = new ArrayList<>();  // Lista para almacenar los tokens encontrados
-    private int start = 0;  // Marca el inicio del lexema actual
-    private int current = 0;  // Marca la posición actual en el código
-    private int line = 1;  // Rastrea la línea actual para los mensajes de error
+    private final String source;
+    private final List<Token> tokens = new ArrayList<>();
+    private int start = 0;
+    private int current = 0;
+    private int line = 1;
 
-    // Mapa que asocia palabras reservadas con sus tipos de tokens
     private static final Map<String, TipoToken> palabrasReservadas;
     static {
         palabrasReservadas = new HashMap<>();
@@ -28,39 +26,36 @@ public class Scanner {
         palabrasReservadas.put("true", TipoToken.TRUE);
     }
 
-    // Constructor que inicializa el analizador léxico con el texto fuente
     public Scanner(String source) {
         this.source = source;
     }
 
-    // Método principal para iniciar el análisis léxico
     public List<Token> scanTokens() {
         while (!isAtEnd()) {
-            start = current;  // Marca el inicio de un nuevo lexema
-            scanToken();  // Escanea el siguiente token
-        }
-        
-        // Si solo hay comentarios, asegúrate de que solo se agregue EOF.
-        if (tokens.isEmpty() || (tokens.size() == 1 && tokens.get(0).tipo == TipoToken.EOF)) {
-        tokens.clear(); // Limpiar los tokens en caso de que haya solo comentarios
+            start = current;
+            scanToken();
         }
 
-        tokens.add(new Token(TipoToken.EOF, "", null, line));  // Añade un token de fin de archivo
-        return tokens;  // Devuelve la lista de tokens encontrados
+        // Si solo hay comentarios o espacios en blanco, asegúrate de que solo se agregue EOF.
+        if (tokens.isEmpty() || (tokens.size() == 1 && tokens.get(0).tipo == TipoToken.EOF)) {
+            tokens.clear(); // Limpiar los tokens en caso de que haya solo comentarios o espacios
+        }
+
+        tokens.add(new Token(TipoToken.EOF, "", null, line));
+        return tokens;
     }
 
-    // Método que identifica el tipo de token según el carácter actual
     private void scanToken() {
-        char c = advance();  // Avanza al siguiente carácter
+        char c = advance();
         switch (c) {
             case '(': addToken(TipoToken.LEFT_PAREN); break;
             case ')': addToken(TipoToken.RIGHT_PAREN); break;
             case '+': addToken(TipoToken.PLUS); break;
-            case '-': addToken(TipoToken.MINUS); 
+            case '-':
                 if (match('-')) { // Comentario de una línea
                     skipSingleLineComment();
                 } else {
-                    addToken(TipoToken.MINUS); // Solo agrega MINUS si no es un comentario
+                    addToken(TipoToken.MINUS); // Solo añade MINUS si no es un comentario
                 }
                 break;
             case '*': addToken(TipoToken.STAR); break;
@@ -69,16 +64,17 @@ public class Scanner {
                     skipMultiLineComment();
                 } else {
                     addToken(TipoToken.SLASH);
-                }break;
+                }
+                break;
             case ',': addToken(TipoToken.COMA); break;
             case ';': addToken(TipoToken.SEMICOLON); break;
             case '.': addToken(TipoToken.DOT); break;
             case '=': addToken(TipoToken.EQUAL); break;
             case '>':
-                addToken(match('=') ? TipoToken.GE : TipoToken.GT);  // >= o >
+                addToken(match('=') ? TipoToken.GE : TipoToken.GT);
                 break;
             case '<':
-                addToken(match('=') ? TipoToken.LE : TipoToken.LT);  // <= o <
+                addToken(match('=') ? TipoToken.LE : TipoToken.LT);
                 break;
             case ' ':
             case '\r':
@@ -99,6 +95,7 @@ public class Scanner {
                 break;
         }
     }
+
     private void skipSingleLineComment() {
         while (peek() != '\n' && !isAtEnd()) advance();
     }
@@ -117,16 +114,16 @@ public class Scanner {
             System.err.println("Error: Comentario de varias líneas sin cerrar.");
         }
     }
-    
+
     private void number() {
         while (isDigit(peek())) advance();
 
-        if (peek() == '.' && isDigit(peekNext())) {  // Reconoce números decimales
+        if (peek() == '.' && isDigit(peekNext())) {
             advance();
             while (isDigit(peek())) advance();
         }
 
-        if (peek() == 'E' || peek() == 'e') {  // Reconoce notación científica
+        if (peek() == 'E' || peek() == 'e') {
             advance();
             if (peek() == '+' || peek() == '-') advance();
             while (isDigit(peek())) advance();
@@ -200,3 +197,4 @@ public class Scanner {
         tokens.add(new Token(type, text, literal, line));
     }
 }
+
