@@ -105,17 +105,17 @@ public class Scanner {
             if (peek() == '*' && peekNext() == '/') {
                 advance(); // Avanza el '*'
                 advance(); // Avanza el '/'
-                return; // Finaliza el comentario correctamente
+                return; // Termina el comentario de varias líneas
             }
-            // Si encuentra un salto de línea, incrementa el contador de líneas
+            // Incrementa la línea si encuentra un salto de línea
             if (peek() == '\n') {
                 line++;
             }
-            advance();
+            advance(); // Avanza al siguiente carácter
         }
-        // Si sale del bucle sin encontrar "*/", muestra un error
-        System.err.println("Error en la línea " + line + ": Comentario de varias líneas sin cerrar.");
-    }
+        // Si se alcanza el final del archivo, considera el comentario como cerrado implícitamente
+        System.out.println("Advertencia: Comentario de varias líneas sin cerrar al final de la entrada.");
+    } 
 
     private void number() {
         while (isDigit(peek())) advance();
