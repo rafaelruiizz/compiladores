@@ -275,10 +275,13 @@ public class Parser {
 
     // Método para imprimir un mensaje de error y cambiar el estado a ERROR
     private void error(String mensaje) {
-        System.err.println("[Línea " + lookahead.linea + "] Error: " + mensaje);
+        System.err.println("== ERROR (Parser): bad token at [" + lookahead.linea + ":" + (tokensIndex + 1) + "] >> " + lookahead.lexema + " <<");
+        System.err.println("==== [T] " + mensaje);
+        System.err.println("PARSING FAILED");
         state = ParserState.ERROR;
         synchronize();
     }
+    
 
     // Función para sincronizar después de un error
     private void synchronize() {
