@@ -60,8 +60,9 @@ public class Scanner {
                 if (match('-')) { // Comentario de una línea
                     skipSingleLineComment();
                 } else {
-                    addToken(TipoToken.MINUS);
-                }break;
+                    addToken(TipoToken.MINUS); // Solo agrega MINUS si no es un comentario
+                }
+                break;
             case '*': addToken(TipoToken.STAR); break;
             case '/':
                 if (match('*')) { // Comentario de varias líneas
