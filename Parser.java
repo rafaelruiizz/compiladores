@@ -36,7 +36,7 @@ public class Parser {
 
     // Método para comparar el token actual con el tipo esperado
     private void match(TipoToken type) {
-        System.out.println("Trying to match: " + type + " with " + lookahead.tipo);
+
         if (lookahead.tipo == type) { // Si el token actual coincide con el tipo esperado
             tokensIndex++;  // Avanza al siguiente token
             if (tokensIndex < tokens.size()) {
