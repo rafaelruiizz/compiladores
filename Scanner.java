@@ -102,6 +102,7 @@ public class Scanner {
 
     private void skipMultiLineComment() {
         while (!isAtEnd()) {
+            // Si encuentra el cierre de comentario, sale del método
             if (peek() == '*' && peekNext() == '/') {
                 advance(); // Avanza el '*'
                 advance(); // Avanza el '/'
@@ -113,9 +114,11 @@ public class Scanner {
             }
             advance(); // Avanza al siguiente carácter
         }
-        // Si se alcanza el final del archivo sin encontrar */, ignora el error y continúa
+        // Si llega aquí, significa que el comentario no tiene cierre '*/'
+        // Emitimos una advertencia en lugar de detener el análisis
         System.out.println("Advertencia: Comentario de varias líneas sin cerrar al final de la entrada.");
     }
+    
 
     private void number() {
         while (isDigit(peek())) advance();
