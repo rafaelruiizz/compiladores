@@ -105,14 +105,16 @@ public class Scanner {
             if (peek() == '*' && peekNext() == '/') {
                 advance(); // Avanza el '*'
                 advance(); // Avanza el '/'
-                break;
+                return; // Finaliza el comentario correctamente
             }
-            if (peek() == '\n') line++;
+            // Si encuentra un salto de línea, incrementa el contador de líneas
+            if (peek() == '\n') {
+                line++;
+            }
             advance();
         }
-        if (isAtEnd()) {
-            System.err.println("Error: Comentario de varias líneas sin cerrar.");
-        }
+        // Si sale del bucle sin encontrar "*/", muestra un error
+        System.err.println("Error en la línea " + line + ": Comentario de varias líneas sin cerrar.");
     }
 
     private void number() {
