@@ -41,11 +41,6 @@ public class Scanner {
         }
         tokens.add(new Token(TipoToken.EOF, "", null, line));  // Añade un token de fin de archivo
 
-        // Depuración: imprimir tokens generados
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
-
         return tokens;  // Devuelve la lista de tokens encontrados
     }
 
