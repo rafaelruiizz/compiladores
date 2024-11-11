@@ -246,6 +246,20 @@ public class Parser {
                 || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
                 || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.IDENTIFICADOR) {
             match(lookahead.tipo);
+            // Manejo de "IS NOT NULL" específicamente para expresiones de campo
+            if (lookahead.tipo == TipoToken.IS) {
+                match(TipoToken.IS);
+                if (lookahead.tipo == TipoToken.NOT) {
+                    match(TipoToken.NOT);
+                    if (lookahead.tipo == TipoToken.NULL) {
+                        match(TipoToken.NULL);
+                    } else {
+                        error("Se esperaba 'NULL' después de 'IS NOT'.");
+                    }
+                } else {
+                    error("Se esperaba 'NOT' después de 'IS'.");
+                }
+            }
         } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
             match(TipoToken.LEFT_PAREN);
             expr();
