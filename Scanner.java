@@ -113,9 +113,9 @@ public class Scanner {
             }
             advance(); // Avanza al siguiente carácter
         }
-        // Si se alcanza el final del archivo, considera el comentario como cerrado implícitamente
+        // Si se alcanza el final del archivo sin encontrar */, ignora el error y continúa
         System.out.println("Advertencia: Comentario de varias líneas sin cerrar al final de la entrada.");
-    } 
+    }
 
     private void number() {
         while (isDigit(peek())) advance();
