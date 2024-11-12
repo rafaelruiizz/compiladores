@@ -35,12 +35,7 @@ public class Scanner {
             start = current;
             scanToken();
         }
-
-        // Si solo hay comentarios o espacios en blanco, asegúrate de que solo se agregue EOF.
-        if (tokens.isEmpty() || (tokens.size() == 1 && tokens.get(0).tipo == TipoToken.EOF)) {
-            tokens.clear(); // Limpiar los tokens en caso de que haya solo comentarios o espacios
-        }
-
+        // Agrega el token EOF al final, independientemente de si hay comentarios o espacios
         tokens.add(new Token(TipoToken.EOF, "", null, line));
         return tokens;
     }
