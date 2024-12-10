@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.List;
 
 // Enumeración para representar los posibles estados del analizador sintáctico
@@ -60,40 +61,44 @@ public class Parser {
 
     // Q → select D from T W
     // Regla principal de consulta SQL que debe comenzar con la palabra clave SELECT
-    private void consulta() {
-        if (state == ParserState.ERROR) return;
-
+    private QueryNode consulta() {
+        if (state == ParserState.ERROR) return null;
+    
         if (lookahead.tipo == TipoToken.SELECT) {  // Verifica que la consulta comience con SELECT
             match(TipoToken.SELECT);
-            d();  // Llama a la regla D
+            SelectNode select = d();  // Crea el nodo SELECT
             if (lookahead.tipo == TipoToken.FROM) {
                 match(TipoToken.FROM);
-                t();  // Llama a la regla T
-                w();  // Llama a la regla W
+                FromNode from = t();  // Crea el nodo FROM
+                WhereNode where = w();  // Crea el nodo WHERE
                 // Punto y coma opcional para finalizar la consulta
                 if (lookahead.tipo == TipoToken.SEMICOLON) {
                     match(TipoToken.SEMICOLON);
                 }
+                return new QueryNode(select, from, where); // Devuelve el nodo raíz del AST
             } else {
                 error("Se esperaba 'FROM' después de 'SELECT'");
             }
         } else {
             error("Se esperaba 'SELECT' al inicio de la consulta");
         }
+        return null; // En caso de error, devuelve null
     }
+    
 
     // D → distinct P | P
     // Regla que verifica si hay un DISTINCT opcional antes de las proyecciones
-    private void d() {
-        if (state == ParserState.ERROR) return;
+private SelectNode d() {
+    List<ASTNode> fields = new ArrayList<>();
 
-        if (lookahead.tipo == TipoToken.DISTINCT) {
-            match(TipoToken.DISTINCT);
-            p();
-        } else {
-            p();
-        }
+    if (lookahead.tipo == TipoToken.DISTINCT) {
+        match(TipoToken.DISTINCT); // Consume DISTINCT si está presente
     }
+
+    fields.addAll(f()); // Obtén los nodos de las expresiones seleccionadas
+    return new SelectNode(fields); // Crea y devuelve el nodo SelectNode
+}
+
 
     // P → * | F
     // Regla que permite un asterisco (*) o una lista de expresiones (F) para las columnas seleccionadas
