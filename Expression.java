@@ -2,8 +2,6 @@ import java.util.List;
 
 // Clase base abstracta para expresiones
 
-import java.util.*;
-
 abstract class Expression {
   public abstract Object solve();
 }
