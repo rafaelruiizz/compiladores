@@ -4,7 +4,7 @@ import java.util.List;
 enum ParserState {
     BEGIN,     // Estado inicial del parser
     FINISH,    // Estado cuando el análisis finaliza correctamente
-    ERROR      // Estado cuando ocurre un error de sintaxis
+    ERROR      // Estado cuando ocurre un error de sintaxis.
 }
 
 // Clase Parser para analizar la secuencia de tokens y verificar la sintaxis de una consulta SQL
