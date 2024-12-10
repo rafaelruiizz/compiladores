@@ -3,345 +3,260 @@ import java.util.List;
 
 // Enumeración para representar los posibles estados del analizador sintáctico
 enum ParserState {
-    BEGIN,     // Estado inicial del parser
-    FINISH,    // Estado cuando el análisis finaliza correctamente
-    ERROR      // Estado cuando ocurre un error de sintaxis.
+    BEGIN,
+    FINISH,
+    ERROR
 }
 
-// Clase Parser para analizar la secuencia de tokens y verificar la sintaxis de una consulta SQL
+// Clase Parser para analizar la secuencia de tokens y construir el AST
 public class Parser {
-    private final List<Token> tokens;   // Lista de tokens generada por el scanner (análisis léxico)
-    private int tokensIndex = 0;        // Índice actual en la lista de tokens
-    private Token lookahead;            // Token que se está analizando actualmente (token de "mira adelante")
-    private ParserState state;          // Estado actual del parser (BEGIN, FINISH, ERROR)
+    private final List<Token> tokens;
+    private int tokensIndex = 0;
+    private Token lookahead;
+    private ParserState state;
 
-    // Constructor que inicializa el parser con la lista de tokens
     public Parser(List<Token> tokens) {
         this.tokens = tokens;
-        this.tokensIndex = 0;
-        this.lookahead = tokens.get(tokensIndex);  // Obtiene el primer token
-        this.state = ParserState.BEGIN;            // Inicia en el estado BEGIN
+        this.lookahead = tokens.get(tokensIndex);
+        this.state = ParserState.BEGIN;
     }
 
-    // Método principal de análisis sintáctico
-    public void parse() {
-        consulta();  // Inicia el análisis con la regla de consulta principal
-        
-        // Verifica si el análisis terminó correctamente o si hubo un error
-        if (state == ParserState.ERROR) {
-            System.out.println("PARSING FAILED");  // Muestra mensaje de fallo si hay un error
-        } else /*(state == ParserState.FINISH && lookahead.tipo == TipoToken.EOF)*/ {
-            System.out.println("== PARSED SUCCESSFULLY ==");
-        } /* else {
-            System.out.println("Estado final: " + state);  // Depuración del estado final
-            System.out.println("Token final: " + lookahead);  // Depuración del último token
-        }*/
-    }
-    
-
-    // Método para comparar el token actual con el tipo esperado
     private void match(TipoToken type) {
-        if (lookahead.tipo == type) { // Si el token actual coincide con el tipo esperado
-            tokensIndex++;  // Avanza al siguiente token
-            if (tokensIndex < tokens.size()) {
-                lookahead = tokens.get(tokensIndex);  // Actualiza lookahead al siguiente token
-            } else {
-                lookahead = new Token(TipoToken.EOF, "", 0); // Forzar EOF si ya no hay más tokens
-                state = ParserState.FINISH; // Marca el estado como FINISH si ya no hay más tokens
-                System.out.println("Estado cambiado a FINISH en match()");  // Mensaje de depuración
-            }
+        if (lookahead.tipo == type) {
+            tokensIndex++;
+            lookahead = (tokensIndex < tokens.size()) ? tokens.get(tokensIndex) : new Token(TipoToken.EOF, "", 0);
         } else {
-            state = ParserState.ERROR;  // Cambia el estado a ERROR si no coincide el tipo esperado
-            error("Se esperaba: " + type + " pero se encontró: " + lookahead.tipo);
+            error("Se esperaba: " + type + ", pero se encontró: " + lookahead.tipo);
         }
     }
-    
 
-    // Implementación de las reglas gramaticales para SQL
-
-    // Q → select D from T W
-    // Regla principal de consulta SQL que debe comenzar con la palabra clave SELECT
-    private QueryNode consulta() {
+    public QueryNode consulta() {
         if (state == ParserState.ERROR) return null;
     
-        if (lookahead.tipo == TipoToken.SELECT) {  // Verifica que la consulta comience con SELECT
+        if (lookahead.tipo == TipoToken.SELECT) {
             match(TipoToken.SELECT);
-            SelectNode select = d();  // Crea el nodo SELECT
+            SelectNode select = d();
             if (lookahead.tipo == TipoToken.FROM) {
                 match(TipoToken.FROM);
-                FromNode from = t();  // Crea el nodo FROM
-                WhereNode where = w();  // Crea el nodo WHERE
-                // Punto y coma opcional para finalizar la consulta
+                List<FromNode> from = t(); // Cambiado a una lista
+                WhereNode where = w();
                 if (lookahead.tipo == TipoToken.SEMICOLON) {
                     match(TipoToken.SEMICOLON);
                 }
-                return new QueryNode(select, from, where); // Devuelve el nodo raíz del AST
+                return new QueryNode(select, from, where); // Cambia QueryNode para aceptar listas de FromNode
             } else {
                 error("Se esperaba 'FROM' después de 'SELECT'");
             }
         } else {
             error("Se esperaba 'SELECT' al inicio de la consulta");
         }
-        return null; // En caso de error, devuelve null
+        return null;
     }
     
 
-    // D → distinct P | P
-    // Regla que verifica si hay un DISTINCT opcional antes de las proyecciones
-private SelectNode d() {
-    List<ASTNode> fields = new ArrayList<>();
-
-    if (lookahead.tipo == TipoToken.DISTINCT) {
-        match(TipoToken.DISTINCT); // Consume DISTINCT si está presente
+    private SelectNode d() {
+        List<ASTNode> fields = new ArrayList<>();
+        if (lookahead.tipo == TipoToken.DISTINCT) {
+            match(TipoToken.DISTINCT);
+        }
+        fields.addAll(p()); // Delegar a `p()` para manejar las proyecciones
+        return new SelectNode(fields);
     }
-
-    fields.addAll(f()); // Obtén los nodos de las expresiones seleccionadas
-    return new SelectNode(fields); // Crea y devuelve el nodo SelectNode
-}
-
-
-    // P → * | F
-    // Regla que permite un asterisco (*) o una lista de expresiones (F) para las columnas seleccionadas
-    private void p() {
-        if (state == ParserState.ERROR) return;
-
-        if (lookahead.tipo == TipoToken.STAR) {
+    
+    private List<ASTNode> p() {
+        List<ASTNode> fields = new ArrayList<>();
+        if (lookahead.tipo == TipoToken.STAR) { // Manejar el asterisco (*)
             match(TipoToken.STAR);
+            fields.add(new StarNode());
         } else {
-            f();
+            fields.addAll(f()); // Delegar a `f()` para manejar las expresiones o funciones
         }
+        return fields;
     }
-
-    // F → Expr F1
-    // Regla para una lista de expresiones de columna, separadas por comas
-    private void f() {
-        if (state == ParserState.ERROR) return;
-
-        expr();
-        f1();
+    
+    private List<ASTNode> f() {
+        List<ASTNode> fields = new ArrayList<>();
+        fields.add(expr());
+        fields.addAll(f1());
+        return fields;
     }
-
-    // F1 → , Expr F1 | ε
-    // Regla recursiva para manejar múltiples expresiones separadas por comas
-    private void f1() {
-        if (state == ParserState.ERROR) return;
-
+    
+    private List<ASTNode> f1() {
+        List<ASTNode> fields = new ArrayList<>();
         if (lookahead.tipo == TipoToken.COMA) {
             match(TipoToken.COMA);
-            if (lookahead.tipo == TipoToken.IDENTIFICADOR || lookahead.tipo == TipoToken.NUMERO
-                    || lookahead.tipo == TipoToken.CADENA || lookahead.tipo == TipoToken.STAR) {
-                expr();
-                f1();   // Llama a sí misma recursivamente para manejar múltiples comas
-            } else {
-                error("Se esperaba una expresión válida después de ','");
-            }
+            fields.add(expr());
+            fields.addAll(f1());
         }
+        return fields;
     }
 
-    // T → id T3
-    // Regla para identificar el nombre de la tabla después de FROM
-    private void t() {
-        if (state == ParserState.ERROR) return;
-
+    private List<FromNode> t() {
+        List<FromNode> tables = new ArrayList<>();
+        tables.add(parseTable());
+        while (lookahead.tipo == TipoToken.COMA) {
+            match(TipoToken.COMA);
+            tables.add(parseTable());
+        }
+        return tables;
+    }
+    
+    private FromNode parseTable() {
         if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
+            String table = lookahead.lexema;
             match(TipoToken.IDENTIFICADOR);
-            // Permite un identificador adicional como alias de tabla
+            String alias = null;
             if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-                match(TipoToken.IDENTIFICADOR); // Soporte para alias de tabla
+                alias = lookahead.lexema;
+                match(TipoToken.IDENTIFICADOR); // Consume el alias
             }
-            t3();  // Llama a la regla T3 para manejar múltiples tablas
+            return new FromNode(table, alias);
         } else {
-            error("Se esperaba un nombre de tabla después de 'FROM'");
+            error("Se esperaba un nombre de tabla.");
+            return null;
         }
     }
 
-    // T3 → , IDENTIFICADOR T3 | ε
-    // Regla recursiva para manejar múltiples tablas separadas por comas
-    private void t3() {
-        if (state == ParserState.ERROR) return;
-
-        if (lookahead.tipo == TipoToken.COMA) {
-            match(TipoToken.COMA);
-            if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
+    private ASTNode expr() {
+        ASTNode node;
+    
+        if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
+            String field = lookahead.lexema;
+            match(TipoToken.IDENTIFICADOR);
+    
+            // Manejo de acceso a tablas (schema.tables)
+            if (lookahead.tipo == TipoToken.DOT) {
+                match(TipoToken.DOT);
+                String subField = lookahead.lexema;
                 match(TipoToken.IDENTIFICADOR);
-                if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-                    match(TipoToken.IDENTIFICADOR); // Soporte para alias de tabla
-                }
-                t3(); // Llama recursivamente para manejar más tablas
-            } else {
-                error("Se esperaba un nombre de tabla después de ','");
+                return new FieldNode(field + "." + subField);
             }
+    
+            // Manejo de funciones (func(...))
+            if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+                match(TipoToken.LEFT_PAREN);
+                List<ASTNode> arguments = new ArrayList<>();
+                if (lookahead.tipo != TipoToken.RIGHT_PAREN) { // Procesa argumentos
+                    arguments.add(expr());
+                    while (lookahead.tipo == TipoToken.COMA) {
+                        match(TipoToken.COMA);
+                        arguments.add(expr());
+                    }
+                }
+                match(TipoToken.RIGHT_PAREN);
+                return new FunctionNode(field, arguments);
+            }
+    
+            return new FieldNode(field); // Nodo para un identificador simple
+        } else if (lookahead.tipo == TipoToken.NUMERO) {
+            String number = lookahead.lexema;
+            match(TipoToken.NUMERO);
+            return new NumberNode(number);
+        } else if (lookahead.tipo == TipoToken.CADENA) {
+            String string = lookahead.lexema;
+            match(TipoToken.CADENA);
+            return new StringNode(string);
+        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+            match(TipoToken.LEFT_PAREN);
+            node = logicOr(); // Procesa expresiones dentro de paréntesis
+            match(TipoToken.RIGHT_PAREN);
+            return node;
+        } else if (lookahead.tipo == TipoToken.NOT_OPERATOR) {
+            match(TipoToken.NOT_OPERATOR);
+            return new NotNode(expr());
+        } else {
+            error("Expresión no válida.");
+            return null;
         }
     }
-
-    // W → where Expr | ε
-    // Regla opcional que analiza la cláusula WHERE seguida de una expresión lógica
-    private void w() {
-        if (state == ParserState.ERROR) return;
-
+    
+    private WhereNode w() {
         if (lookahead.tipo == TipoToken.WHERE) {
             match(TipoToken.WHERE);
-            expr();
+            ASTNode condition = logicOr(); // Delegar a `logicOr()` para manejar la lógica
+            return new WhereNode(condition);
         }
+        return new WhereNode(null);
     }
-
-    // Reglas para expresiones lógicas (condiciones)
-
-    // Expr → LogicOr
-    // La regla principal para analizar expresiones lógicas
-    private void expr() {
-        logicOr();
-    }
-    private void logicOr() {
-        if (state == ParserState.ERROR) return;
-        logicAnd();
-        logicOr1();
-        }
-    private void logicOr1() {
-        if (lookahead.tipo == TipoToken.OR) {
+    private ASTNode logicOr() {
+        ASTNode left = logicAnd();
+        while (lookahead.tipo == TipoToken.OR) {
             match(TipoToken.OR);
-            logicOr();
-            }
+            ASTNode right = logicAnd();
+            left = new LogicalExprNode(left, "OR", right);
         }
-    // LogicAnd → Equality (and LogicAnd)*
-    // Regla para manejar la operación lógica AND en una expresión
-    private void logicAnd() {
-        if (state == ParserState.ERROR) return;
-        equality();
-        logicAnd1();
-    }
-    private void logicAnd1() {
-        if (lookahead.tipo == TipoToken.AND) {
-            match(TipoToken.AND);
-            logicAnd();
-            }
-        }
-    // Equality → Comparison ((= | !=) Comparison)*
-    // Regla para manejar operadores de igualdad y desigualdad en una expresión
-    private void equality() {
-        comparison();
-        equality1();
-    }
-    private void equality1() {
-        if (lookahead.tipo == TipoToken.EQUAL || lookahead.tipo == TipoToken.NE) {
-            match(lookahead.tipo); // Consume el operador.
-            equality1();           // Permite manejar múltiples operadores consecutivos.
-        }
-    }
-    // Comparison → Term ((< | <= | > | >=) Term)*
-    // Regla para manejar operadores de comparación (<, <=, >, >=)
-    private void comparison(){
-        term();
-        comparison1();
-    }
-    private void comparison1() {
-        if (lookahead.tipo == TipoToken.LT || lookahead.tipo == TipoToken.LE || lookahead.tipo == TipoToken.GT || lookahead.tipo == TipoToken.GE) {
-            match(lookahead.tipo);
-        }
-    }
-    // Term → Factor ((+ | -) Factor)
-    // Regla para manejar operaciones aritméticas de suma y resta
-    private void term() {
-        factor();
-        term1();
-    }
-    private void term1() {
-        if (lookahead.tipo == TipoToken.PLUS || lookahead.tipo == TipoToken.MINUS) {
-            match(lookahead.tipo); // Consume el operador.
-            term();
-        }
-    }
-    // Factor → Unary ((* | /) Unary)*
-    // Regla para manejar operaciones aritméticas de multiplicación y división
-    private void factor() {
-        unary();
-        factor1();
-        }
-        private void factor1() {
-            if (lookahead.tipo == TipoToken.SLASH || lookahead.tipo == TipoToken.STAR) {
-                match(lookahead.tipo); // Consume el operador.
-                factor();
-            }
-        }
-        
-    // Unary → (! | -)? Primary
-    // Regla para manejar operadores unarios como NOT y el operador de negación
-    private void unary() {
-        if (lookahead.tipo == TipoToken.NOT_OPERATOR || lookahead.tipo == TipoToken.MINUS) {
-            match(lookahead.tipo); // Consume el operador ! o -
-            unary();              // Procesa la siguiente operación unaria.
-        } else {
-            call(); // Procesa llamadas o valores entre paréntesis.
-        }
+        return left;
     }
     
-    private void call() {
-        primary();
-        call1();
+    private ASTNode logicAnd() {
+        ASTNode left = equality();
+        while (lookahead.tipo == TipoToken.AND) {
+            match(TipoToken.AND);
+            ASTNode right = equality();
+            left = new LogicalExprNode(left, "AND", right);
         }
-
-    private void call1(){
-        if (lookahead.tipo == TipoToken.LEFT_PAREN){
-            match(lookahead.tipo); // Consume el operador.
-            arguments();
-            if (lookahead.tipo == TipoToken.RIGHT_PAREN){
-                match(lookahead.tipo);
-            }
-            else{
-                System.err.println("Error: falta cerrar el paréntesis en la línea " + lookahead.linea);
-            }
-            }
+        return left;
     }
-    // Primary → true | false | null | number | string | id AliasOpc | ( Expr )
-    // Regla para manejar valores primitivos, identificadores calificados, llamadas a funciones y expresiones entre paréntesis
-    private void primary() {
-        if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE || lookahead.tipo == TipoToken.NULL || 
-            lookahead.tipo == TipoToken.NUMERO || lookahead.tipo == TipoToken.CADENA) {
-                match(lookahead.tipo);
-            }
-            else if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-                match(TipoToken.IDENTIFICADOR);
-                aliasOpc();
-            }
-                else if (lookahead.tipo == TipoToken.LEFT_PAREN){
-                    match(lookahead.tipo); // Consume el operador.
-                    expr();
-                        if (lookahead.tipo == TipoToken.RIGHT_PAREN){
-                            match(lookahead.tipo);
-                        }
-                        else{
-                        System.err.println("Error: falta cerrar el paréntesis en la línea " + lookahead.linea);
-                        }
-                }
-            } // Hasta aqui
-
-    private void aliasOpc() {
-        if (lookahead.tipo == TipoToken.DOT) {
-            match(TipoToken.DOT); // Consume el operador '.'
-                if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-                    match(TipoToken.IDENTIFICADOR); // Consume el identificador después del punto
-                } else {
-                    System.err.println("Error: falta un identificador después del '.' en la línea " + lookahead.linea);
-                }
-            }
+    
+    private ASTNode equality() {
+        ASTNode left = comparison();
+        while (lookahead.tipo == TipoToken.EQUAL || lookahead.tipo == TipoToken.NE) {
+            String operator = lookahead.lexema;
+            match(lookahead.tipo);
+            ASTNode right = comparison();
+            left = new RelationalExprNode(left, operator, right);
         }
-            
-    private void arguments() {
-        expr(); // Procesa el primer argumento.
-        arguments1(); // Procesa los argumentos adicionales (si los hay).
+        return left;
     }
-        private void arguments1(){
-            if (lookahead.tipo == TipoToken.COMA){
-                match(TipoToken.COMA);
-                expr(); // Procesa el siguiente argumento.
-                arguments1(); // Llama recursivamente para manejar más argumentos.
-            }
+    
+    private ASTNode comparison() {
+        ASTNode left = arithmeticExpr(); // Usa `arithmeticExpr` para cálculos
+        while (lookahead.tipo == TipoToken.LT || lookahead.tipo == TipoToken.GT ||
+               lookahead.tipo == TipoToken.LE || lookahead.tipo == TipoToken.GE) {
+            String operator = lookahead.lexema;
+            match(lookahead.tipo);
+            ASTNode right = arithmeticExpr();
+            left = new RelationalExprNode(left, operator, right);
         }
-
-    // Método para imprimir un mensaje de error y cambiar el estado a ERROR
+        return left;
+    }
+    
+    private ASTNode arithmeticExpr() {
+        ASTNode left = term();
+        while (lookahead.tipo == TipoToken.PLUS || lookahead.tipo == TipoToken.MINUS) {
+            String operator = lookahead.lexema;
+            match(lookahead.tipo);
+            ASTNode right = term();
+            left = new ArithmeticExprNode(left, operator, right);
+        }
+        return left;
+    }
+    
+    private ASTNode term() {
+        ASTNode left = factor();
+        while (lookahead.tipo == TipoToken.SLASH || lookahead.tipo == TipoToken.STAR) {
+            String operator = lookahead.lexema;
+            match(lookahead.tipo);
+            ASTNode right = factor();
+            left = new ArithmeticExprNode(left, operator, right);
+        }
+        return left;
+    }
+    
+    private ASTNode factor() {
+        if (lookahead.tipo == TipoToken.LEFT_PAREN) {
+            match(TipoToken.LEFT_PAREN);
+            ASTNode node = logicOr();
+            match(TipoToken.RIGHT_PAREN);
+            return node;
+        } else if (lookahead.tipo == TipoToken.NUMERO || lookahead.tipo == TipoToken.CADENA) {
+            return expr(); // Procesa valores literales
+        } else {
+            return expr(); // Llama a `expr` para manejar cualquier nodo
+        }
+    }
     private void error(String mensaje) {
-        System.err.println("== ERROR (Parser): bad token at [" + lookahead.linea + ":" + (tokensIndex + 1) + "] >> " + lookahead.lexema + " <<");
-        System.err.println("==== [T] " + mensaje);
+        System.err.println("Error: " + mensaje);
         state = ParserState.ERROR;
     }
 }

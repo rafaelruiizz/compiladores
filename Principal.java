@@ -11,6 +11,10 @@ public class Principal {
     }
 
     private static void ejecutarPrompt() throws IOException {
+        System.out.println("Bienvenido al parser SQL interactivo.");
+        System.out.println("Escribe tu consulta SQL y presiona Enter.");
+        System.out.println("Para salir, presiona Ctrl + D.\n");
+
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
 
@@ -24,29 +28,32 @@ public class Principal {
     }
 
     private static void ejecutar(String source) {
-        // Escaneo de tokens
+        if (source.trim().isEmpty()) {
+            System.out.println("La entrada está vacía. Escribe una consulta SQL.");
+            return;
+        }
+
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
-    
-        // Análisis sintáctico y construcción del AST
+
         Parser parser = new Parser(tokens);
-        QueryNode ast = parser.consulta(); // Construye el AST con el método consulta()
-    
-        // Verificar si el AST fue generado correctamente
+        QueryNode ast = parser.consulta();
+
         if (ast != null) {
-            // Imprimir el AST
             PrinterQuery printer = new PrinterQuery();
-            ast.accept(printer); // Recorre e imprime el AST
+            ast.accept(printer);
         } else {
-            System.err.println("Error: No se pudo construir el AST.");
+            System.err.println("Error: La consulta tiene errores de sintaxis.");
         }
-    
-        // Imprimir los tokens generados (opcional, para depuración)
-        for (Token token : tokens) {
-            System.out.println(token);
+
+        // Imprimir tokens generados
+        if (!tokens.isEmpty()) {
+            System.out.println("Tokens generados:");
+            for (Token token : tokens) {
+                System.out.println(token);
+            }
         }
     }
-    
 
     static void error(int linea, String mensaje) {
         reportar(linea, "", mensaje);
@@ -57,3 +64,5 @@ public class Principal {
         existenErrores = true;
     }
 }
+
+
