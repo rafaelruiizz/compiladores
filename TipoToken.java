@@ -4,5 +4,6 @@ public enum TipoToken {
     COMA, SEMICOLON, DOT, LEFT_PAREN, RIGHT_PAREN,
     LT, LE, GT, GE, EQUAL, NE,
     PLUS, MINUS, STAR, SLASH,
+    NOT_OPERATOR,
     EOF
 }

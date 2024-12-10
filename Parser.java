@@ -187,118 +187,151 @@ public class Parser {
     private void expr() {
         logicOr();
     }
-
-    // LogicOr → LogicAnd (or LogicOr)*
-    // Regla para manejar la operación lógica OR en una expresión
     private void logicOr() {
+        if (state == ParserState.ERROR) return;
         logicAnd();
-        while (lookahead.tipo == TipoToken.OR) {
-            match(TipoToken.OR);
-            logicAnd();
+        logicOr1();
         }
-    }
-
+    private void logicOr1() {
+        if (lookahead.tipo == TipoToken.OR) {
+            match(TipoToken.OR);
+            logicOr();
+            }
+        }
     // LogicAnd → Equality (and LogicAnd)*
     // Regla para manejar la operación lógica AND en una expresión
     private void logicAnd() {
+        if (state == ParserState.ERROR) return;
         equality();
-        while (lookahead.tipo == TipoToken.AND) {
-            match(TipoToken.AND);
-            equality();
-        }
+        logicAnd1();
     }
-
+    private void logicAnd1() {
+        if (lookahead.tipo == TipoToken.AND) {
+            match(TipoToken.AND);
+            logicAnd();
+            }
+        }
     // Equality → Comparison ((= | !=) Comparison)*
     // Regla para manejar operadores de igualdad y desigualdad en una expresión
     private void equality() {
         comparison();
-        while (lookahead.tipo == TipoToken.EQUAL || lookahead.tipo == TipoToken.NE) {
-            match(lookahead.tipo);
-            comparison();
+        equality1();
+    }
+    private void equality1() {
+        if (lookahead.tipo == TipoToken.EQUAL || lookahead.tipo == TipoToken.NE) {
+            match(lookahead.tipo); // Consume el operador.
+            equality1();           // Permite manejar múltiples operadores consecutivos.
         }
     }
-
     // Comparison → Term ((< | <= | > | >=) Term)*
     // Regla para manejar operadores de comparación (<, <=, >, >=)
-    private void comparison() {
+    private void comparison(){
         term();
-        while (lookahead.tipo == TipoToken.LT || lookahead.tipo == TipoToken.LE
-                || lookahead.tipo == TipoToken.GT || lookahead.tipo == TipoToken.GE) {
+        comparison1();
+    }
+    private void comparison1() {
+        if (lookahead.tipo == TipoToken.LT || lookahead.tipo == TipoToken.LE || lookahead.tipo == TipoToken.GT || lookahead.tipo == TipoToken.GE) {
             match(lookahead.tipo);
-            term();
         }
     }
-
     // Term → Factor ((+ | -) Factor)
-    // Term → Factor ((+ | -) Factor)*
     // Regla para manejar operaciones aritméticas de suma y resta
     private void term() {
         factor();
-        while (lookahead.tipo == TipoToken.PLUS || lookahead.tipo == TipoToken.MINUS) {
-            match(lookahead.tipo);
-            factor();
+        term1();
+    }
+    private void term1() {
+        if (lookahead.tipo == TipoToken.PLUS || lookahead.tipo == TipoToken.MINUS) {
+            match(lookahead.tipo); // Consume el operador.
+            term();
         }
     }
-
     // Factor → Unary ((* | /) Unary)*
     // Regla para manejar operaciones aritméticas de multiplicación y división
     private void factor() {
         unary();
-        while (lookahead.tipo == TipoToken.STAR || lookahead.tipo == TipoToken.SLASH) {
-            match(lookahead.tipo);
-            unary();
+        factor1();
         }
-    }
-
+        private void factor1() {
+            if (lookahead.tipo == TipoToken.SLASH || lookahead.tipo == TipoToken.STAR) {
+                match(lookahead.tipo); // Consume el operador.
+                factor();
+            }
+        }
+        
     // Unary → (! | -)? Primary
     // Regla para manejar operadores unarios como NOT y el operador de negación
     private void unary() {
-        if (lookahead.tipo == TipoToken.NOT || lookahead.tipo == TipoToken.MINUS) {
-            match(lookahead.tipo);
-            unary();
+        if (lookahead.tipo == TipoToken.NOT_OPERATOR || lookahead.tipo == TipoToken.MINUS) {
+            match(lookahead.tipo); // Consume el operador ! o -
+            unary();              // Procesa la siguiente operación unaria.
         } else {
-            primary();
+            call(); // Procesa llamadas o valores entre paréntesis.
         }
     }
+    
+    private void call() {
+        primary();
+        call1();
+        }
 
+    private void call1(){
+        if (lookahead.tipo == TipoToken.LEFT_PAREN){
+            match(lookahead.tipo); // Consume el operador.
+            arguments();
+            if (lookahead.tipo == TipoToken.RIGHT_PAREN){
+                match(lookahead.tipo);
+            }
+            else{
+                System.err.println("Error: falta cerrar el paréntesis en la línea " + lookahead.linea);
+            }
+            }
+    }
     // Primary → true | false | null | number | string | id AliasOpc | ( Expr )
     // Regla para manejar valores primitivos, identificadores calificados, llamadas a funciones y expresiones entre paréntesis
     private void primary() {
-        if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE
-                || lookahead.tipo == TipoToken.NULL || lookahead.tipo == TipoToken.NUMERO
-                || lookahead.tipo == TipoToken.CADENA) {
-            match(lookahead.tipo);
-        } else if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
-            match(TipoToken.IDENTIFICADOR);
-            // Soporte para identificadores calificados (e.g., schema.tables)
-            if (lookahead.tipo == TipoToken.DOT) {
-                match(TipoToken.DOT);
+        if (lookahead.tipo == TipoToken.TRUE || lookahead.tipo == TipoToken.FALSE || lookahead.tipo == TipoToken.NULL || 
+            lookahead.tipo == TipoToken.NUMERO || lookahead.tipo == TipoToken.CADENA) {
+                match(lookahead.tipo);
+            }
+            else if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
                 match(TipoToken.IDENTIFICADOR);
+                aliasOpc();
             }
-            // Soporte para llamadas a funciones con argumentos
-            if (lookahead.tipo == TipoToken.LEFT_PAREN) {
-                match(TipoToken.LEFT_PAREN);
-                if (lookahead.tipo != TipoToken.RIGHT_PAREN) {
+                else if (lookahead.tipo == TipoToken.LEFT_PAREN){
+                    match(lookahead.tipo); // Consume el operador.
                     expr();
-                    while (lookahead.tipo == TipoToken.COMA) {
-                        match(TipoToken.COMA);
-                        expr();
-                    }
+                        if (lookahead.tipo == TipoToken.RIGHT_PAREN){
+                            match(lookahead.tipo);
+                        }
+                        else{
+                        System.err.println("Error: falta cerrar el paréntesis en la línea " + lookahead.linea);
+                        }
                 }
-                match(TipoToken.RIGHT_PAREN);
+            } // Hasta aqui
+
+    private void aliasOpc() {
+        if (lookahead.tipo == TipoToken.DOT) {
+            match(TipoToken.DOT); // Consume el operador '.'
+                if (lookahead.tipo == TipoToken.IDENTIFICADOR) {
+                    match(TipoToken.IDENTIFICADOR); // Consume el identificador después del punto
+                } else {
+                    System.err.println("Error: falta un identificador después del '.' en la línea " + lookahead.linea);
+                }
             }
-        } else if (lookahead.tipo == TipoToken.LEFT_PAREN) {
-            match(TipoToken.LEFT_PAREN);
-            expr();
-            if (lookahead.tipo == TipoToken.RIGHT_PAREN) {
-                match(TipoToken.RIGHT_PAREN);
-            } else {
-                error("Se esperaba ')' para cerrar la expresión entre paréntesis.");
-            }
-        } else {
-            error("Expresión no válida: se esperaba '(' o un IDENTIFICADOR.");
         }
+            
+    private void arguments() {
+        expr(); // Procesa el primer argumento.
+        arguments1(); // Procesa los argumentos adicionales (si los hay).
     }
+        private void arguments1(){
+            if (lookahead.tipo == TipoToken.COMA){
+                match(TipoToken.COMA);
+                expr(); // Procesa el siguiente argumento.
+                arguments1(); // Llama recursivamente para manejar más argumentos.
+            }
+        }
 
     // Método para imprimir un mensaje de error y cambiar el estado a ERROR
     private void error(String mensaje) {

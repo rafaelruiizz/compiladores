@@ -65,10 +65,13 @@ public class Scanner {
             case ';': addToken(TipoToken.SEMICOLON); break;
             case '.': addToken(TipoToken.DOT); break;
             case '=': addToken(TipoToken.EQUAL); break;
+            case '!':
+                addToken(match('=') ? TipoToken.NE : TipoToken.NOT_OPERATOR);
+                break;
             case '>':
                 addToken(match('=') ? TipoToken.GE : TipoToken.GT);
                 break;
-            case '<':
+            case '<':;
                 addToken(match('=') ? TipoToken.LE : TipoToken.LT);
                 break;
             case ' ':
